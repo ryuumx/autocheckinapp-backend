@@ -1,0 +1,102 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  autocheckinapp
+  Sample SAM Template for autocheckinapp
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 3
+    Environment:
+      Variables:
+        BUCKETNAME: "autocheckin202006"
+        REKOGNITIONCOLLECTION: "AutoCheckin" #aws:rekognition:ap-southeast-1:907833590179:collection/AutoCheckin
+        REKOGNITIONFACEMATCHTHRESHOLD: 95
+        
+
+Resources:
+
+  AutoCheckInAPI:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: "AutoCheckInAPI"
+      Cors: 
+        AllowMethods: "'POST'"
+        AllowHeaders: "'*'"
+        AllowOrigin: "'*'"
+      StageName: Prod
+
+  RegisterFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: register/
+      Handler: app.lambda_handler
+      Runtime: python3.6
+      Events:
+        Register:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /register
+            Method: post
+            RestApiId:
+              Ref: AutoCheckInAPI
+      Policies:
+      - Statement:
+        - Sid: AllowRekognitionActions
+          Effect: Allow
+          Action:
+          - rekognition:*
+          Resource: '*'
+        - Sid: AllowS3Actions
+          Effect: Allow
+          Action:
+          - s3:*
+          Resource: '*'
+  
+  CheckinFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: checkin/
+      Handler: app.lambda_handler
+      Runtime: python3.6
+      Events:
+        Register:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /checkin
+            Method: post
+            RestApiId:
+              Ref: AutoCheckInAPI
+      Policies:
+      - Statement:
+        - Sid: AllowRekognitionActions
+          Effect: Allow
+          Action:
+          - rekognition:*
+          Resource: '*'
+        - Sid: AllowS3Actions
+          Effect: Allow
+          Action:
+          - s3:*
+          Resource: '*'
+
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  Api:
+    Description: "API Gateway endpoint URL for Prod stage"
+    Value: !Sub "https://${AutoCheckInAPI}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  RegisterFunction:
+    Description: "Register Lambda Function ARN"
+    Value: !GetAtt RegisterFunction.Arn
+  CheckinFunction:
+    Description: "Checkin Lambda Function ARN"
+    Value: !GetAtt CheckinFunction.Arn
+  RegisterFunctionIamRole:
+    Description: "Implicit IAM Role created for Register function"
+    Value: !GetAtt RegisterFunctionRole.Arn
+  CheckinFunctionIamRole:
+    Description: "Implicit IAM Role created for Checkin function"
+    Value: !GetAtt CheckinFunctionRole.Arn
