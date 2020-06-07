@@ -1,10 +1,8 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  autocheckinapp
-  Sample SAM Template for autocheckinapp
+  SAM Template for autocheckinapp
 
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
     Timeout: 3
@@ -13,6 +11,7 @@ Globals:
         BUCKETNAME: "autocheckin202006"
         REKOGNITIONCOLLECTION: "AutoCheckin" #aws:rekognition:ap-southeast-1:907833590179:collection/AutoCheckin
         REKOGNITIONFACEMATCHTHRESHOLD: 95
+        DYNAMODBTABLENAME: "AutoCheckin"
         
 
 Resources:
@@ -22,20 +21,46 @@ Resources:
     Properties:
       Name: "AutoCheckInAPI"
       Cors: 
-        AllowMethods: "'POST'"
+        AllowMethods: "'POST, OPTIONS'"
         AllowHeaders: "'*'"
         AllowOrigin: "'*'"
       StageName: Prod
+      Auth:
+        DefaultAuthorizer: MyCognitoAuthorizer
+        Authorizers:
+          MyCognitoAuthorizer:
+            UserPoolArn: !GetAtt MyCognitoUserPool.Arn
+  
+  MyCognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: "AutoCheckin"
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+      UsernameAttributes:
+        - email
+      Schema:
+        - AttributeDataType: String
+          Name: email
+          Required: false
+  
+  MyCognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref MyCognitoUserPool
+      ClientName: "AutoCheckinClient"
+      GenerateSecret: false
 
   RegisterFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Type: AWS::Serverless::Function
     Properties:
       CodeUri: register/
       Handler: app.lambda_handler
       Runtime: python3.6
       Events:
         Register:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Type: Api
           Properties:
             Path: /register
             Method: post
@@ -53,16 +78,23 @@ Resources:
           Action:
           - s3:*
           Resource: '*'
+        - Sid: AllowDynamoActions
+          Effect: Allow
+          Action:
+          - dynamodb:*
+          Resource: '*'
+    Auth:
+      Authorizer: NONE
   
   CheckinFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Type: AWS::Serverless::Function 
     Properties:
       CodeUri: checkin/
       Handler: app.lambda_handler
       Runtime: python3.6
       Events:
         Register:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Type: Api
           Properties:
             Path: /checkin
             Method: post
@@ -80,11 +112,13 @@ Resources:
           Action:
           - s3:*
           Resource: '*'
+        - Sid: AllowDynamoActions
+          Effect: Allow
+          Action:
+          - dynamodb:*
+          Resource: '*'
 
 Outputs:
-  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
-  # Find out more about other implicit resources you can reference within SAM
-  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
   Api:
     Description: "API Gateway endpoint URL for Prod stage"
     Value: !Sub "https://${AutoCheckInAPI}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
@@ -100,3 +134,9 @@ Outputs:
   CheckinFunctionIamRole:
     Description: "Implicit IAM Role created for Checkin function"
     Value: !GetAtt CheckinFunctionRole.Arn
+  DynamoDBTable:
+      Description: "DynamoDB Table Name"
+      Value: !Ref DynamoDBTable
+  CognitoUserPoolId:
+      Description: "Cognito User Pool Id"
+      Value: !Ref MyCognitoUserPool
