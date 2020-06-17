@@ -1,0 +1,114 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  autocheckinapp
+  Sample SAM Template for autocheckinapp
+
+Globals:
+  Function:
+    Timeout: 3
+    Environment:
+      Variables:
+        BUCKETNAME: "autocheckinapp-uploads121109-dev"
+        REKOGNITIONCOLLECTION: "AutoCheckin" #aws:rekognition:ap-southeast-1:907833590179:collection/AutoCheckin
+        REKOGNITIONFACEMATCHTHRESHOLD: 95
+  Api:
+    Cors: 
+      AllowMethods: "'POST,OPTIONS'"
+      AllowHeaders: "'*'"
+      AllowOrigin: "'*'"
+
+Resources:
+
+  AutoCheckInAPI:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: "AutoCheckInAPI"
+      StageName: Prod
+
+  RegisterFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: register/
+      Handler: app.lambda_handler
+      Runtime: python3.6
+      Events:
+        Register:
+          Type: Api 
+          Properties:
+            Path: /register
+            Method: post
+            RestApiId:
+              Ref: AutoCheckInAPI
+      Policies:
+      - Statement:
+        - Sid: AllowRekognitionActions
+          Effect: Allow
+          Action:
+          - rekognition:*
+          Resource: '*'
+        - Sid: AllowS3Actions
+          Effect: Allow
+          Action:
+          - s3:*
+          Resource: '*'
+  RegisterOptionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: option/
+      Handler: app.lambda_handler
+      Runtime: python3.6
+      Events:
+        Register:
+          Type: Api
+          Properties:
+            Path: /register
+            Method: options
+            RestApiId:
+              Ref: AutoCheckInAPI
+  
+  CheckinFunction:
+    Type: AWS::Serverless::Function 
+    Properties:
+      CodeUri: checkin/
+      Handler: app.lambda_handler
+      Runtime: python3.6
+      Events:
+        Register:
+          Type: Api 
+          Properties:
+            Path: /checkin
+            Method: post
+            RestApiId:
+              Ref: AutoCheckInAPI
+      Policies:
+      - Statement:
+        - Sid: AllowRekognitionActions
+          Effect: Allow
+          Action:
+          - rekognition:*
+          Resource: '*'
+        - Sid: AllowS3Actions
+          Effect: Allow
+          Action:
+          - s3:*
+          Resource: '*'
+  CheckinOptionFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: option/
+      Handler: app.lambda_handler
+      Runtime: python3.6
+      Events:
+        Register:
+          Type: Api
+          Properties:
+            Path: /checkin
+            Method: options
+            RestApiId:
+              Ref: AutoCheckInAPI
+
+Outputs:
+  Api:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${AutoCheckInAPI}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
