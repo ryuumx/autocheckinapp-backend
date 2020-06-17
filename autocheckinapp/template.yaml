@@ -12,11 +12,7 @@ Globals:
         REKOGNITIONCOLLECTION: "AutoCheckin" #aws:rekognition:ap-southeast-1:907833590179:collection/AutoCheckin
         REKOGNITIONFACEMATCHTHRESHOLD: 95
         DYNAMODBTABLENAME: "AutoCheckin"
-  Api:
-    Cors: 
-      AllowMethods: "'POST,OPTIONS'"
-      AllowHeaders: "'*'"
-      AllowOrigin: "'*'"
+        
 
 Resources:
 
@@ -24,13 +20,16 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       Name: "AutoCheckInAPI"
+      Cors: 
+        AllowMethods: "'POST, OPTIONS'"
+        AllowHeaders: "'*'"
+        AllowOrigin: "'*'"
       StageName: Prod
       Auth:
         DefaultAuthorizer: MyCognitoAuthorizer
         Authorizers:
           MyCognitoAuthorizer:
             UserPoolArn: !GetAtt MyCognitoUserPool.Arn
-        AddDefaultAuthorizerToCorsPreflight: False
   
   MyCognitoUserPool:
     Type: AWS::Cognito::UserPool
@@ -86,23 +85,6 @@ Resources:
           Resource: '*'
     Auth:
       Authorizer: NONE
-      
-  RegisterOptionFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: option/
-      Handler: app.lambda_handler
-      Runtime: python3.6
-      Events:
-        Register:
-          Type: Api
-          Properties:
-            Path: /register
-            Method: options
-            RestApiId:
-              Ref: AutoCheckInAPI
-    Auth:
-      Authorizer: NONE
   
   CheckinFunction:
     Type: AWS::Serverless::Function 
@@ -135,27 +117,26 @@ Resources:
           Action:
           - dynamodb:*
           Resource: '*'
-  CheckinOptionFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: option/
-      Handler: app.lambda_handler
-      Runtime: python3.6
-      Events:
-        Register:
-          Type: Api
-          Properties:
-            Path: /checkin
-            Method: options
-            RestApiId:
-              Ref: AutoCheckInAPI
-    Auth:
-      Authorizer: NONE
 
 Outputs:
   Api:
     Description: "API Gateway endpoint URL for Prod stage"
     Value: !Sub "https://${AutoCheckInAPI}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  RegisterFunction:
+    Description: "Register Lambda Function ARN"
+    Value: !GetAtt RegisterFunction.Arn
+  CheckinFunction:
+    Description: "Checkin Lambda Function ARN"
+    Value: !GetAtt CheckinFunction.Arn
+  RegisterFunctionIamRole:
+    Description: "Implicit IAM Role created for Register function"
+    Value: !GetAtt RegisterFunctionRole.Arn
+  CheckinFunctionIamRole:
+    Description: "Implicit IAM Role created for Checkin function"
+    Value: !GetAtt CheckinFunctionRole.Arn
+  DynamoDBTable:
+      Description: "DynamoDB Table Name"
+      Value: !Ref DynamoDBTable
   CognitoUserPoolId:
       Description: "Cognito User Pool Id"
       Value: !Ref MyCognitoUserPool

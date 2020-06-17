@@ -1,3 +1,4 @@
+from botocore.exceptions import ClientError
 import boto3
 import os
 import logging
@@ -69,12 +70,6 @@ def lambda_handler(event, context):
         logger.exception(e)
         return {
                 "statusCode": 500,
-                "headers": {
-                    "Access-Control-Allow-Headers": "*",
-                    "Access-Control-Allow-Methods": "POST",
-                    "Access-Control-Allow-Origin": "*",
-                    "Content-Type": "application/json"
-                },
                 "body": json.dumps({
                     "message": "Error: {}".format(e),
                 }),
@@ -105,12 +100,6 @@ def lambda_handler(event, context):
             )
         return {
                 "statusCode": 500,
-                "headers": {
-                    "Access-Control-Allow-Headers": "*",
-                    "Access-Control-Allow-Methods": "POST",
-                    "Access-Control-Allow-Origin": "*",
-                    "Content-Type": "application/json"
-                },
                 "body": json.dumps({
                     "message": "Error: {}".format(e),
                 }),
@@ -120,12 +109,6 @@ def lambda_handler(event, context):
 
     return {
         "statusCode": 200,
-        "headers": {
-            "Access-Control-Allow-Headers": "*",
-            "Access-Control-Allow-Methods": "POST",
-            "Access-Control-Allow-Origin": "*",
-            "Content-Type": "application/json"
-        },
         "body": json.dumps({
             "message": "Success. Information recorded",
         }),
