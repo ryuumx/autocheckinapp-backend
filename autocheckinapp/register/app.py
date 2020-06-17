@@ -7,10 +7,8 @@ import json
 
 BUCKET = os.environ['BUCKETNAME']
 COLLECTION_ID = os.environ['REKOGNITIONCOLLECTION']
-DYNAMODB_TABLE = os.environ['DYNAMODBTABLENAME']
 LOG_LEVEL = logging.INFO
 
-dynamodb = boto3.client('dynamodb')
 s3 = boto3.client('s3')
 rekognition = boto3.client('rekognition')
 
@@ -39,77 +37,33 @@ def lambda_handler(event, context):
     data = json.loads(event['body'])
     
     image = data['image']
-    firstname = data['firstname']
-    lastname = data['lastname']
-    email = data['email']
-    if 'company' in data:
-        company = data['company']
-    else:
-        company = ''
     
-    try:
-        logger.info("Indexing faces.")
-        response = rekognition.index_faces(
-            Image={
-                "S3Object": {
-                    "Bucket": BUCKET,
-                    "Name": image
-                }
-            },
-            CollectionId=COLLECTION_ID
-        )
+    logger.info("Indexing faces.")
+    response = rekognition.index_faces(
+        Image={
+            "S3Object": {
+                "Bucket": BUCKET,
+                "Name": image
+            }
+        },
+        CollectionId=COLLECTION_ID
+    )
     
-        logger.info("Reading results.")
-        if response['ResponseMetadata']['HTTPStatusCode'] != 200 or len(response['FaceRecords']) == 0:
-            raise Exception("Fail to register a face to Rekognition.")
-        
-        faceId = response['FaceRecords'][0]['Face']['FaceId']
-        logger.info("Recorded faceId: {}".format(faceId))
-            
-    except Exception as e:
-        logger.exception(e)
+    logger.info("Getting results.")
+    if response['ResponseMetadata']['HTTPStatusCode'] != 200 or len(response['FaceRecords']) == 0:
         return {
-                "statusCode": 500,
-                "body": json.dumps({
-                    "message": "Error: {}".format(e),
-                }),
-            }
+            "statusCode": 500,
+            "body": json.dumps({
+                "message": "Fail to register a face to Rekognition.",
+            }),
+        }
     
-    try:
-        logger.info("Putting information to DynamoDB table.")
-        response = dynamodb.put_item(
-            TableName=DYNAMODB_TABLE,
-            Item={
-                'FaceId': {'S': faceId},
-                'FirstName': {'S': firstname},
-                'LastName': {'S': lastname},
-                'Company': {'S': company},
-                'Email': {'S': email}
-            }
-        )
-        
-        logger.info("Reading results.")
-        if response['ResponseMetadata']['HTTPStatusCode'] != 200:
-            raise Exception("Fail to put information to DynamoDB table.")
-    
-    except Exception as e:
-        logger.exception(e)
-        rekognition.delete_faces(
-                CollectionId=COLLECTION_ID,
-                FaceIds=[faceId]
-            )
-        return {
-                "statusCode": 500,
-                "body": json.dumps({
-                    "message": "Error: {}".format(e),
-                }),
-            }
-    
-    logger.info("All information recorded.")
+    faceId = response['FaceRecords'][0]['Face']['FaceId']
+    logger.info("Recorded faceId: {}".format(faceId))
 
     return {
         "statusCode": 200,
         "body": json.dumps({
-            "message": "Success. Information recorded",
+            "message": "Success. Face recorded",
         }),
     }
