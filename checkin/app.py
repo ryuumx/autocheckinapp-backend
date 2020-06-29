@@ -54,9 +54,9 @@ def lambda_handler(event, context):
         if response['ResponseMetadata']['HTTPStatusCode'] != 200 or len(response['FaceMatches']) == 0:
             raise Exception("Fail to find similar face")
     
-        faceFound = response['FaceMatches'][0]['Face']
-        faceId = faceFound['FaceId']
-        confidence = faceFound['Confidence']
+        faceFound = response['FaceMatches'][0]
+        faceId = faceFound['Face']['FaceId']
+        confidence = faceFound['Similarity']
         logger.info("Found faceId: {}. Confidence level: {}".format(faceId, confidence))
 
         return {
