@@ -1,7 +1,7 @@
 import json
 
 def lambda_handler(event, context):
-
+    # Returing mock success message
     return {
         "statusCode": 200,
         "headers": {

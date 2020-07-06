@@ -1,17 +1,17 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  autocheckinapp
-  Sample SAM Template for autocheckinapp
+  SAM Template for autocheckinapp
 
 Globals:
   Function:
-    Timeout: 3
+    Timeout: 5
     Environment:
       Variables:
-        BUCKETNAME: "autocheckinapp-uploads121109-dev"
-        REKOGNITIONCOLLECTION: "AutoCheckin" #aws:rekognition:ap-southeast-1:907833590179:collection/AutoCheckin
+        BUCKETNAME: "autocheckinapp-uploads114212-eptwo"
+        REKOGNITIONCOLLECTION: "AutoCheckinApp"
         REKOGNITIONFACEMATCHTHRESHOLD: 95
+        DYNAMODBTABLENAME: "AutoCheckinApp"
   Api:
     Cors: 
       AllowMethods: "'POST,OPTIONS'"
@@ -52,6 +52,12 @@ Resources:
           Action:
           - s3:*
           Resource: '*'
+        - Sid: AllowDynamoActions
+          Effect: Allow
+          Action:
+          - dynamodb:*
+          Resource: '*'
+  
   RegisterOptionFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -93,6 +99,12 @@ Resources:
           Action:
           - s3:*
           Resource: '*'
+        - Sid: AllowDynamoActions
+          Effect: Allow
+          Action:
+          - dynamodb:*
+          Resource: '*'
+  
   CheckinOptionFunction:
     Type: AWS::Serverless::Function
     Properties:
